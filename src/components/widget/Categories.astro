@@ -1,12 +1,12 @@
 ---
-import ButtonLink from "@/components/common/ButtonLink.astro";
 import WidgetLayout from "@/components/common/WidgetLayout.astro";
 import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
 import type { WidgetComponentConfig } from "@/types/config";
-import { getCategoryList } from "@/utils/content-utils";
+import { getCategoryTree } from "@/utils/content-utils";
+import CategoryTree from "./CategoryTree.astro";
 
-const categories = await getCategoryList();
+const categories = await getCategoryTree();
 
 const COLLAPSED_HEIGHT = "7.5rem";
 
@@ -27,13 +27,5 @@ const isCollapsed = collapseThreshold
 <WidgetLayout name={i18n(I18nKey.categories)} showTitle={showTitle} id="categories" isCollapsed={isCollapsed} collapsedHeight={COLLAPSED_HEIGHT}
                 class={className} style={style}
 >
-    {categories.map((c) =>
-        <ButtonLink
-            url={c.url}
-            badge={String(c.count)}
-            label={`View all posts in the ${c.name.trim()} category`}
-        >
-            {c.name.trim()}
-        </ButtonLink>
-    )}
+    <CategoryTree nodes={categories} />
 </WidgetLayout>

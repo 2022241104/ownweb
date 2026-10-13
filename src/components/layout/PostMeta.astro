@@ -4,6 +4,7 @@ import { commentConfig } from "@/config";
 import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
 import { formatDateToYYYYMMDD } from "@/utils/date-utils";
+import { parseCategoryPath } from "@/utils/taxonomy-utils";
 import { getCategoryUrl, getTagUrl } from "@/utils/url-utils";
 
 export interface Props {
@@ -59,6 +60,7 @@ const {
 const path = customPath || (id ? `/posts/${id}` : "");
 const visibleTags =
 	typeof maxTags === "number" ? tags?.slice(0, maxTags) : tags;
+const categoryParts = parseCategoryPath(category);
 ---
 
 <div
@@ -122,14 +124,36 @@ const visibleTags =
           <Icon name="material-symbols:book-2-outline-rounded" class="text-xl" />
         </div>
         <div class="flex flex-row flex-nowrap items-center">
-          <a
-            href={getCategoryUrl(category || "")}
-            aria-label={`View all posts in the ${category || i18n(I18nKey.uncategorized)} category`}
-            class="link-lg transition text-50 text-sm font-medium
-              hover:text-(--primary) dark:hover:text-(--primary) whitespace-nowrap"
-          >
-            {category || i18n(I18nKey.uncategorized)}
-          </a>
+          {
+            categoryParts.length > 0 ? (
+              categoryParts.map((part, index, parts) => (
+                <>
+                  {index > 0 && (
+                    <span class="mx-1 text-30" aria-hidden="true">
+                      /
+                    </span>
+                  )}
+                  <a
+                    href={getCategoryUrl(parts.slice(0, index + 1).join("/"))}
+                    aria-label={`查看「${parts.slice(0, index + 1).join("/")}」下的全部文章`}
+                    class="link-lg transition text-50 text-sm font-medium
+                      hover:text-(--primary) dark:hover:text-(--primary) whitespace-nowrap"
+                  >
+                    {part}
+                  </a>
+                </>
+              ))
+            ) : (
+              <a
+                href={getCategoryUrl("")}
+                aria-label={`View all posts in the ${i18n(I18nKey.uncategorized)} category`}
+                class="link-lg transition text-50 text-sm font-medium
+                  hover:text-(--primary) dark:hover:text-(--primary) whitespace-nowrap"
+              >
+                {i18n(I18nKey.uncategorized)}
+              </a>
+            )
+          }
         </div>
       </div>
     )

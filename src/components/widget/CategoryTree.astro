@@ -1,0 +1,44 @@
+---
+import ButtonLink from "@/components/common/ButtonLink.astro";
+import type { Category } from "@/utils/taxonomy-utils";
+import CategoryTree from "./CategoryTree.astro";
+
+interface Props {
+	nodes: Category[];
+	depth?: number;
+}
+
+const { nodes, depth = 0 } = Astro.props;
+---
+
+<ul class:list={["category-tree", { "category-tree-nested": depth > 0 }]}>
+  {
+    nodes.map((node) => (
+      <li>
+        <ButtonLink
+          url={node.url}
+          badge={String(node.count)}
+          label={`查看「${node.path}」下的全部文章`}
+        >
+          {node.name}
+        </ButtonLink>
+        {node.children.length > 0 && (
+          <CategoryTree nodes={node.children} depth={depth + 1} />
+        )}
+      </li>
+    ))
+  }
+</ul>
+
+<style>
+  .category-tree {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .category-tree-nested {
+    margin-left: 0.75rem;
+    padding-left: 0.5rem;
+    border-left: 1px dashed color-mix(in oklch, var(--primary) 35%, transparent);
+  }
+</style>

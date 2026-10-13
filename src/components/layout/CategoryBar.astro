@@ -2,7 +2,9 @@
 import I18nKey from "@i18n/i18nKey";
 import { i18n } from "@i18n/translation";
 import { Icon } from "astro-icon/components";
-import { getCategoryList, getSortedPostsList } from "@/utils/content-utils";
+import { taxonomyTree } from "@/config/taxonomyConfig";
+import { getCategoryTree, getSortedPostsList } from "@/utils/content-utils";
+import { categoryMatches } from "@/utils/taxonomy-utils";
 import { url } from "@/utils/url-utils";
 
 interface Props {
@@ -11,7 +13,10 @@ interface Props {
 
 const { currentPostCategory } = Astro.props as Props;
 
-const categories = await getCategoryList();
+const predefinedRoots = new Set(taxonomyTree.map((node) => node.name));
+const categories = (await getCategoryTree()).filter((category) =>
+	predefinedRoots.has(category.path),
+);
 const totalPosts = (await getSortedPostsList()).length;
 const homeUrl = url("/");
 const archiveUrl = url("/archive/");
@@ -36,7 +41,8 @@ function initialActive(categoryName: string): {
 	if (isCategories)
 		return categoryName === "__categories__" ? { active: true } : {};
 	if (isArchive) return categoryName === "__archive__" ? { active: true } : {};
-	if (postCategory && categoryName === postCategory) return { soft: true };
+	if (postCategory && categoryMatches(postCategory, categoryName))
+		return { soft: true };
 	return {};
 }
 ---
@@ -81,7 +87,7 @@ function initialActive(categoryName: string): {
               href={cat.url}
               class="category-pill focus-ring-inset text-sm px-4 py-1.5 whitespace-nowrap
                      transition-colors duration-150 ease-out flex items-center justify-center"
-              data-category-name={cat.name}
+              data-category-name={cat.path}
               data-active={active.active ? "" : undefined}
               data-soft-active={active.soft ? "" : undefined}
             >
@@ -213,7 +219,11 @@ function initialActive(categoryName: string): {
 
     if (activeCategory) {
       pills.forEach((pill) => {
-        if (pill.getAttribute("data-category-name") === activeCategory) {
+        const name = pill.getAttribute("data-category-name") || "";
+        if (
+          name &&
+          (activeCategory === name || activeCategory.startsWith(`${name}/`))
+        ) {
           pill.setAttribute("data-active", "");
         }
       });
@@ -228,7 +238,11 @@ function initialActive(categoryName: string): {
 
     if (postCategory) {
       pills.forEach((pill) => {
-        if (pill.getAttribute("data-category-name") === postCategory) {
+        const name = pill.getAttribute("data-category-name") || "";
+        if (
+          name &&
+          (postCategory === name || postCategory.startsWith(`${name}/`))
+        ) {
           pill.setAttribute("data-soft-active", "");
         }
       });

@@ -1,0 +1,85 @@
+---
+import { Icon } from "astro-icon/components";
+import type { Category } from "@/utils/taxonomy-utils";
+import CategoryBlocks from "./CategoryBlocks.astro";
+
+interface Props {
+	nodes: Category[];
+	depth?: number;
+}
+
+const { nodes, depth = 0 } = Astro.props;
+---
+
+<div class:list={["category-blocks", { "category-blocks-nested": depth > 0 }]}>
+  {
+    nodes.map((node, index) => (
+      <section
+        class:list={[
+          depth === 0 ? "card-base p-6" : "rounded-xl px-3 py-2",
+          "onload-animation",
+        ]}
+        style={
+          depth === 0
+            ? `animation-delay: calc(var(--content-delay) + ${index * 50}ms);`
+            : undefined
+        }
+      >
+        <a
+          href={node.url}
+          class="group flex items-center gap-4"
+        >
+          {
+            depth === 0 && (
+              <div class="shrink-0 w-14 h-14 rounded-full bg-(--primary)/10 group-hover:bg-(--primary)/20 flex items-center justify-center transition-colors">
+                <Icon
+                  name="material-symbols:folder-open"
+                  class="text-3xl text-(--primary)"
+                />
+              </div>
+            )
+          }
+          <div class="flex-1 min-w-0">
+            <h2
+              class:list={[
+                "font-bold truncate group-hover:text-(--primary) transition-colors",
+                depth === 0 ? "text-lg text-90" : "text-base text-75",
+              ]}
+              title={node.path}
+            >
+              {node.name}
+            </h2>
+            <p class="text-sm text-30 mt-1 group-hover:text-(--primary)/60 transition-colors">
+              {node.count} 篇
+            </p>
+          </div>
+          <Icon
+            name="material-symbols:chevron-right-rounded"
+            class="shrink-0 text-2xl text-30 group-hover:text-(--primary) transition-colors"
+          />
+        </a>
+        {
+          node.children.length > 0 && (
+            <div class:list={[{ "mt-4 pl-2": depth === 0, "mt-1 ml-3": depth > 0 }]}>
+              <CategoryBlocks nodes={node.children} depth={depth + 1} />
+            </div>
+          )
+        }
+      </section>
+    ))
+  }
+</div>
+
+<style>
+  .category-blocks {
+    display: grid;
+    gap: 1rem;
+  }
+  .category-blocks-nested {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    border-left: 1px dashed color-mix(in oklch, var(--primary) 35%, transparent);
+    padding-left: 0.75rem;
+  }
+</style>

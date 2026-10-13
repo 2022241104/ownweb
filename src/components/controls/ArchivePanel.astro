@@ -3,6 +3,7 @@ import { siteConfig } from "@/config";
 import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
 import { getSortedPostsList } from "@/utils/content-utils";
+import { categoryLeafName } from "@/utils/taxonomy-utils";
 import { getPostUrlBySlug, url } from "@/utils/url-utils";
 
 // 归档列表：全量按年分组，服务端渲染。筛选（?tag=/?category=/?uncategorized）
@@ -133,8 +134,9 @@ const foldOnFilter = collapseAllButFirst;
                     <span class="shrink-0 inline-block text-xs font-medium px-1.5 py-0.5 rounded-sm
                                  bg-[oklch(0.95_0.025_var(--hue))] dark:bg-[oklch(0.25_0.025_var(--hue))]
                                  text-(--primary) group-hover:bg-(--primary) group-hover:text-white!
-                                 transition-colors">
-                      {post.data.category}
+                                 transition-colors"
+                           title={post.data.category}>
+                      {categoryLeafName(post.data.category)}
                     </span>
                   )}
                   <span class="truncate">{post.data.title}</span>
@@ -214,7 +216,14 @@ const foldOnFilter = collapseAllButFirst;
             match = match && rowTags.some((t) => tags.includes(t));
           }
           if (categories.length > 0) {
-            match = match && !!rowCategory && categories.includes(rowCategory);
+            match =
+              match &&
+              !!rowCategory &&
+              categories.some(
+                (category) =>
+                  rowCategory === category ||
+                  rowCategory.startsWith(`${category}/`),
+              );
           }
           if (uncategorized) {
             match = match && !rowCategory;

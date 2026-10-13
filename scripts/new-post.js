@@ -85,7 +85,7 @@ published: ${getDate()}
 description: ''
 image: ''
 tags: []
-category: ''
+category: ''  # 用 / 分层，例如 数学/线性代数。新块会自动出现。
 draft: false
 lang: ''
 slug: ${slug}
