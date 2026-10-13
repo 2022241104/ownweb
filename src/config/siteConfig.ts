@@ -48,7 +48,7 @@ export const siteConfig: SiteConfig = {
 	subtitle: "xin",
 
 	// 站点 URL
-	site_url: "https://blog.example.com",
+	site_url: "https://moonxin.cn",
 
 	// 站点描述
 	description: "记录数学阅读、编程笔记和生活随笔的个人网站。",

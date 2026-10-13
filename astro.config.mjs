@@ -54,7 +54,6 @@ import { remarkPlantuml } from "./src/plugins/remark-plantuml.js";
 import { remarkReadingTime } from "./src/plugins/remark-reading-time.mjs";
 import { remarkWikiLink } from "./src/plugins/remark-wiki-link.js";
 import { collectUsedFontCssVars } from "./src/utils/fontHelper";
-
 if (process.env.NODE_ENV === "development") {
 	setMaxListeners(20);
 }
@@ -117,6 +116,20 @@ export default defineConfig({
 	},
 
 	integrations: [
+		{
+			name: "publish-post-dev",
+			hooks: {
+				"astro:server:setup": async ({ server }) => {
+					const middlewareUrl = new URL(
+						"./scripts/publish-dev-middleware.mjs",
+						import.meta.url,
+					).href;
+					const load = new Function("url", "return import(url)");
+					const { attachPublishMiddleware } = await load(middlewareUrl);
+					attachPublishMiddleware(server);
+				},
+			},
+		},
 		swup({
 			theme: false,
 			animationClass: "transition-swup-", // see https://swup.js.org/options/#animationselector

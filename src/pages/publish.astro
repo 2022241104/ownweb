@@ -1,0 +1,162 @@
+---
+import MainGridLayout from "@/layouts/MainGridLayout.astro";
+import { taxonomyTree } from "@/config/taxonomyConfig";
+import type { TaxonomyNode } from "@/types/taxonomyConfig";
+
+if (!import.meta.env.DEV) {
+	return Astro.redirect("/");
+}
+
+function flattenCategories(nodes: TaxonomyNode[], prefix: string[] = []): string[] {
+	const paths: string[] = [];
+	for (const node of nodes) {
+		const name = node.name?.trim();
+		if (!name) continue;
+		const parts = [...prefix, name];
+		paths.push(parts.join("/"));
+		if (node.children?.length) {
+			paths.push(...flattenCategories(node.children, parts));
+		}
+	}
+	return paths;
+}
+
+const categories = flattenCategories(taxonomyTree);
+const now = new Date();
+const published = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+---
+
+<MainGridLayout title="发布文章" heading="发布文章">
+	<div class="card-base p-6 md:p-8">
+		<p class="text-sm text-black/60 dark:text-white/60 mb-6">
+			选择分块、Obsidian 笔记和封面图。文章会立刻出现在本地预览里。公网网站上看不到这个页面。
+		</p>
+		<form id="publish-form" class="flex flex-col gap-4">
+			<label class="flex flex-col gap-1.5 text-sm">
+				<span>发布到</span>
+				<select name="category" class="publish-field" required>
+					{categories.map((category) => <option value={category}>{category}</option>)}
+				</select>
+			</label>
+			<label class="flex flex-col gap-1.5 text-sm">
+				<span>或填写新块，例如 数学/微分几何</span>
+				<input name="customCategory" class="publish-field" placeholder="留空则使用上面的选择" />
+			</label>
+			<label class="flex flex-col gap-1.5 text-sm">
+				<span>Obsidian 笔记</span>
+				<input name="markdown" type="file" accept=".md,text/markdown" class="publish-field" required />
+			</label>
+			<label class="flex flex-col gap-1.5 text-sm">
+				<span>标题</span>
+				<input name="title" class="publish-field" required />
+			</label>
+			<label class="flex flex-col gap-1.5 text-sm">
+				<span>发布日期</span>
+				<input name="published" type="date" value={published} class="publish-field" required />
+			</label>
+			<label class="flex flex-col gap-1.5 text-sm">
+				<span>封面图</span>
+				<input name="image" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/avif" class="publish-field" />
+			</label>
+			<button type="submit" class="btn-regular h-10 px-4 rounded-lg self-start">发布</button>
+			<p id="publish-status" class="text-sm min-h-5"></p>
+		</form>
+	</div>
+</MainGridLayout>
+
+<style>
+	.publish-field {
+		width: 100%;
+		border-radius: 0.75rem;
+		border: 1px solid var(--line-divider);
+		background: var(--card-bg);
+		padding: 0.55rem 0.8rem;
+	}
+</style>
+
+<script is:inline>
+	function readFileText(file) {
+		return new Promise((resolve, reject) => {
+			const reader = new FileReader();
+			reader.onload = () => resolve(String(reader.result || ""));
+			reader.onerror = () => reject(reader.error);
+			reader.readAsText(file);
+		});
+	}
+
+	function readFileDataUrl(file) {
+		return new Promise((resolve, reject) => {
+			const reader = new FileReader();
+			reader.onload = () => resolve(String(reader.result || ""));
+			reader.onerror = () => reject(reader.error);
+			reader.readAsDataURL(file);
+		});
+	}
+
+	function detectTitle(markdown, fallback) {
+		const frontmatter = markdown.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+		const titleLine = frontmatter?.[1].match(/^title:\s*["']?(.+?)["']?\s*$/m);
+		if (titleLine) return titleLine[1].trim();
+		const heading = markdown.match(/^#\s+(.+)$/m);
+		if (heading) return heading[1].trim();
+		return fallback.replace(/\.md$/i, "");
+	}
+
+	function setupPublishForm() {
+		const form = document.getElementById("publish-form");
+		if (!form || form.dataset.ready === "1") return;
+		form.dataset.ready = "1";
+		const status = document.getElementById("publish-status");
+		const titleInput = form.querySelector('input[name="title"]');
+		const markdownInput = form.querySelector('input[name="markdown"]');
+
+		markdownInput?.addEventListener("change", async () => {
+			const file = markdownInput.files?.[0];
+			if (!file) return;
+			const text = await readFileText(file);
+			if (!titleInput.value.trim()) titleInput.value = detectTitle(text, file.name);
+		});
+
+		form.addEventListener("submit", async (event) => {
+			event.preventDefault();
+			const data = new FormData(form);
+			const markdownFile = data.get("markdown");
+			if (!(markdownFile instanceof File) || !markdownFile.name) {
+				status.textContent = "请选择一篇笔记";
+				return;
+			}
+			status.textContent = "正在发布…";
+			const markdown = await readFileText(markdownFile);
+			const imageFile = data.get("image");
+			let imageBase64 = "";
+			let imageName = "";
+			if (imageFile instanceof File && imageFile.name) {
+				const dataUrl = await readFileDataUrl(imageFile);
+				imageBase64 = dataUrl.slice(dataUrl.indexOf(",") + 1);
+				imageName = imageFile.name;
+			}
+			const customCategory = String(data.get("customCategory") || "").trim();
+			const response = await fetch("/api/publish-post/", {
+				method: "POST",
+				headers: { "content-type": "application/json" },
+				body: JSON.stringify({
+					category: customCategory || data.get("category"),
+					title: data.get("title"),
+					published: data.get("published"),
+					markdown,
+					imageBase64,
+					imageName,
+				}),
+			});
+			const result = await response.json();
+			if (!response.ok) {
+				status.textContent = result.error || "发布失败";
+				return;
+			}
+			status.textContent = "已发布。正在打开文章…";
+			window.location.href = result.urlPath;
+		});
+	}
+
+	setupPublishForm();
+</script>

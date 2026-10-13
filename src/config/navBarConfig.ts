@@ -61,6 +61,14 @@ const getDynamicNavBarConfig = (): NavBarConfig => {
 
 	links.push(LinkPresets.About);
 
+	if (import.meta.env?.DEV) {
+		links.push({
+			name: "发布文章",
+			url: "/publish/",
+			icon: "material-symbols:upload",
+		});
+	}
+
 	// 文档链接
 	// links.push({
 	// 	name: "文档",
